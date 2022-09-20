@@ -1,10 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, SubMsg,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, SubMsg,
 };
 use cw2::set_contract_version;
-use osmosis_std::types::osmosis::gamm::v1beta1::{QueryPoolRequest, QueryPoolResponse};
+use osmosis_std::types::osmosis::gamm::v1beta1::{
+    GammQuerier, Pool, QueryPoolRequest, QueryPoolResponse,
+};
 
 use crate::error::ContractError;
 use crate::msg::{InstantiateMsg, QueryMsg};
@@ -13,14 +15,12 @@ use crate::msg::{InstantiateMsg, QueryMsg};
 const CONTRACT_NAME: &str = "crates.io:cw-osmosis";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const QUERY_POOL_ID: u64 = 1; // TODO figure this out
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    info: MessageInfo,
-    msg: InstantiateMsg,
+    _info: MessageInfo,
+    _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -45,9 +45,6 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_pool(deps: Deps, pool_id: u64) -> StdResult<QueryPoolResponse> {
-    // Ok(GetCountResponse { count: state.count })
-
-    let submessage = SubMsg::reply_on_success(QueryPoolRequest { pool_id }, QUERY_POOL_ID);
-
-    Ok(Response::new().add_submessage(submessage))
+    let res = GammQuerier::new(&deps.querier).pool(pool_id)?;
+    Ok(res)
 }
